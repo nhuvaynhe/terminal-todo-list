@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <conio.h>
 
 #include "task.h"
 #include "file_handler.h"
@@ -66,9 +67,6 @@ static void InsertTask()
     char task[100];
 
     printf("Enter task: ");
-    // Clear leftover newline in buffer before using fgets
-    int ch;
-    while ((ch = getchar()) != '\n' && ch != EOF);
 
     if (fgets(task, sizeof(task), stdin)) {
         // Remove trailing newline from fgets
@@ -81,7 +79,6 @@ static void InsertTask()
         WriteTaskToMemory(newtask);
         ClearScreen();
     }
-
 }
 
 static void MainProcess(char key)
@@ -118,16 +115,9 @@ static void MainProcess(char key)
 
 static void WaitUserInput()
 {
-    printf("\nEnter command: ");
-    int ch = fgetc(stdin);
-    while (ch == '\n') {
-        ch = fgetc(stdin); // Consume stray newline characters
-    }
+    char key = getch();
 
-    if (ch != EOF) {
-        char key = (char)ch;
-        MainProcess(key);
-    }
+    MainProcess(key);
 }
 
 
