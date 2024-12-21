@@ -25,6 +25,19 @@ static char *getDate()
     return date;
 }
 
+static void parseLine(char **src, char *dest, size_t max_size)
+{
+    while( (*(*src) != '\n') & (max_size > 1) ) {
+        *dest++ = *(*src)++;
+        max_size--;
+    }
+    *dest = '\0';
+
+    if (*(*src) == '\n') {
+        (*src)++;
+    }
+}
+
 static Task *createTask(char *task)
 {
     Task *newTask = (Task*) malloc(sizeof(Task));
@@ -57,9 +70,22 @@ static void WriteTaskToMemory(Task *task)
 static void DisplayTask()
 {
     char buffer[100];
+    char *buffer_ptr = buffer;
 
     FILE_read(path, buffer, 100);
-    printf("%s", buffer);
+
+    char date[16];
+    parseLine(&buffer_ptr, date, sizeof(date));
+
+    char task[50];
+    parseLine(&buffer_ptr, task, sizeof(task));
+
+    char status[2];
+    parseLine(&buffer_ptr, status, sizeof(status));
+
+    printf("Date: %s\n", date);
+    printf("Task: %s\n", task);
+    printf("Status: %s\n", status);
 }
 
 static void InsertTask()
