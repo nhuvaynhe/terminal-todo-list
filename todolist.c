@@ -21,22 +21,56 @@ static char *getDate()
 
     time(&t);
     rawtime = localtime(&t);
-    strftime(date, 50, "\%d%b %Y", rawtime);
+    strftime(date, 50, "%d %b %Y", rawtime);
+
     return date;
 }
 
-static void parseLine(char **src, char *dest, size_t max_size)
+static int getLastIndex()
 {
-    while( (*(*src) != '\n') & (max_size > 1) ) {
-        *dest++ = *(*src)++;
-        max_size--;
-    }
-    *dest = '\0';
+    int lastIndex = 0;
 
-    if (*(*src) == '\n') {
-        (*src)++;
+    char buffer[100];
+    char *buf_ptr = buffer;
+
+    if (FILE_read(path, buffer, sizeof(buffer)) < 0) {
+        return 0;
+    }
+    else {
+        lastIndex = buf_ptr[0] - '0';
+    }
+
+    while(*(buf_ptr) != '\0')  {
+        if (*(buf_ptr) == '\n') {
+            lastIndex = *(++buf_ptr) - '0';
+        } 
+        else {
+            buf_ptr++;
+        }
+    }
+
+    return lastIndex;
+}
+
+char *getStatus(char status)
+{
+    int key = status - '0';
+    switch (key)
+    {
+        case PENDING:
+            return "PENDING";
+
+        case IN_PROGRESS:
+            return "IN_PROGRESS";
+
+        case COMPLETED:
+            return "COMPLETED";
+
+        default:
+            return "UNKNOWN"; 
     }
 }
+
 
 static Task *createTask(char *task)
 {
@@ -62,8 +96,10 @@ static void WriteTaskToMemory(Task *task)
 {
     char buffer[100];
 
-    snprintf(buffer, 100, "%s\n%s\n%d\n", 
-                           task->date, task->content, task->status);
+    int lastIdx = getLastIndex() + 1;
+
+    snprintf(buffer, 100, "%c|%s|%d|%s|\n", lastIdx + '0', 
+                           task->content, task->status, task->date);
     FILE_write(path, buffer);
 }
 
@@ -72,20 +108,31 @@ static void DisplayTask()
     char buffer[100];
     char *buffer_ptr = buffer;
 
-    FILE_read(path, buffer, 100);
+    if (FILE_read(path, buffer, sizeof(buffer)) < 0) {
+        return;
+    }
 
-    char date[16];
-    parseLine(&buffer_ptr, date, sizeof(date));
-
-    char task[50];
-    parseLine(&buffer_ptr, task, sizeof(task));
-
+    char id[2];
+    char date[16]; 
+    char task[48];
     char status[2];
-    parseLine(&buffer_ptr, status, sizeof(status));
 
-    printf("Date: %s\n", date);
-    printf("Task: %s\n", task);
-    printf("Status: %s\n", status);
+    char *line = strtok(buffer_ptr, "\n");
+
+    while (line != NULL)
+    {
+        if (sscanf(line, "%[^|]|%[^|]|%[^|]|%[^|]|", id, task, status, date) == 4) {
+            printf("%s\n", id);
+            printf(".Task: %s\n", task);
+            printf(".Status: %s\n", getStatus(status[0]));
+            printf(".Date: %s\n", date);
+            printf("----------------------\n");
+        } else {
+            printf("error: database error");
+        }
+
+        line = strtok(NULL, "\n");
+    }
 }
 
 static void InsertTask()
