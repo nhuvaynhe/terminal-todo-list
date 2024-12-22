@@ -8,5 +8,5 @@ typedef enum KeyProcess {
 typedef enum TaskStatus {
     PENDING,
     IN_PROGRESS,
-    DONE,
+    COMPLETED,
 } TaskStatus;
