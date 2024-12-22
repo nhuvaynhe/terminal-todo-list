@@ -4,10 +4,14 @@ int FILE_write(const char *path, char *content)
 {
     FILE *fptr;
 
-    fptr = fopen(path, "w");
+    fptr = fopen(path, "a");
     if (fptr == NULL) {
-        printf("FILE: file isn't exist.\n");
-        return -1;
+        fptr = fopen(path, "w");
+
+        if (fptr == NULL) {
+            printf("File: create file failed.\n");
+            return -1;
+        }
     }
 
     fprintf(fptr, "%s", content);
@@ -21,7 +25,6 @@ int FILE_read(const char *path, char *buffer, size_t size)
     FILE *fptr;
     fptr = fopen(path, "r");
     if (fptr == NULL) {
-        printf("FILE: file doesn't exist.\n");
         return -1;
     }
 
