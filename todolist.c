@@ -11,7 +11,14 @@
 const char *path = "./database.txt";
 static int currentProc = Proc_None;
 static int shouldClearScreen = 0;
+static enumbool isCmdChanged = eTRUE;
+static int nextCommand = PROC_CMD_NONE; 
 
+static void SetNextCommand(ProcCommand command)
+{
+    nextCommand = command;
+    isCmdChanged = eTRUE;
+}
 
 static void ClearScreen() {
     system("cls");
@@ -178,16 +185,64 @@ static void InsertTask()
 static void EditTask()
 {
     char index[2];
-    printf("Type the task index you want to edit: ");
 
-    if (fgets(index, sizeof(index), stdin)) {
-        // Remove trailing newline from fgets
-        size_t len = strlen(index);
-        if (len > 0 && index[len - 1] == '\n') {
-            index[len - 1] = '\0';
-        }
-        printf("You choose task %c\n", index[0]);
+    switch (nextCommand)
+    {
+        case PROC_CMD_INIT:
+        {
+            if (isCmdChanged)
+            {
+                printf("Type the task index you want to edit: ");
+
+                if (fgets(index, sizeof(index), stdin)) {
+                    // Remove trailing newline from fgets
+                    size_t len = strlen(index);
+                    if (len > 0 && index[len - 1] == '\n') {
+                        index[len - 1] = '\0';
+                    }
+                    printf("You choose task %c\n", index[0]);
+                }
+
+                SetNextCommand(PROC_CMD_PROCESS);
+            }
+        } break;
+
+        case PROC_CMD_PROCESS:
+        {
+            if (isCmdChanged)
+            {
+                char buffer[100]; 
+                printf("Change task description: ");
+
+                if (fgets(buffer, sizeof(buffer), stdin)) {
+                    // Remove trailing newline from fgets
+                    size_t len = strlen(buffer);
+                    if (len > 0 && buffer[len - 1] == '\n') {
+                        buffer[len - 1] = '\0';
+                    }
+                }
+
+                /* Get the task from index and change the task content */
+
+                SetNextCommand(PROC_CMD_END);
+            }
+        } break;
+
+        case PROC_CMD_END:
+        {
+            if (isCmdChanged)
+            {
+                SetNextCommand(PROC_CMD_NONE);
+            }
+        } break;
+    
+        default:
+        {
+
+        } break;
     }
+    
+
 }
 
 static void MainProcess()
@@ -226,6 +281,7 @@ static void MainProcess()
 
         case Proc_EditTask:
         {
+            SetNextCommand(PROC_CMD_INIT);
             EditTask();
             ClearScreen();
         } break;
