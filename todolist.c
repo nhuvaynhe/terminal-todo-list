@@ -186,17 +186,22 @@ static void MainProcess(char key)
     }
 }
 
-static void WaitUserInput()
-{
-    char key = getch();
-
-    MainProcess(key);
+DWORD WINAPI ThreadFunc(void* data) {
+    while (1) {
+        WaitUserInput(); 
+    }
+    return 0;
 }
 
 
 int main()
 {
-    ClearScreen();
+
+    HANDLE thread = CreateThread(NULL, 0, ThreadFunc, NULL, 0, NULL);
+    if (thread == NULL) {
+        printf("Create thread failed");
+        exit(1);
+    }
 
     while(1) {
         DisplayTask();
