@@ -3,11 +3,15 @@
 #include <time.h>
 #include <string.h>
 #include <conio.h>
+#include <windows.h>
 
 #include "task.h"
 #include "file_handler.h"
 
 const char *path = "./database.txt";
+static int currentProc = Proc_None;
+static int shouldClearScreen = 0;
+
 
 static void ClearScreen() {
     system("cls");
@@ -26,22 +30,30 @@ static char *getDate()
     return date;
 }
 
+static char peekChar(char *c) {
+    /* Read but not consume character */
+    return *(++c);
+}
+
 static int getLastIndex()
 {
-    int lastIndex = 0;
+    int lastIndex = -1;
 
-    char buffer[100];
+    char buffer[100] = {0x00};
     char *buf_ptr = buffer;
 
     if (FILE_read(path, buffer, sizeof(buffer)) < 0) {
         return 0;
     }
+    else if (buffer[0] == 0x00) {
+        return 0;
+    } 
     else {
         lastIndex = buf_ptr[0] - '0';
     }
 
     while(*(buf_ptr) != '\0')  {
-        if (*(buf_ptr) == '\n') {
+        if (*(buf_ptr) == '\n' && peekChar(buf_ptr) != '\0') {
             lastIndex = *(++buf_ptr) - '0';
         } 
         else {
@@ -87,7 +99,7 @@ static Task *createTask(char *task)
     return newTask;
 }
 
-static void EditTask(Task *task, char *editContent)
+static void ChangeTaskContent(Task *task, char *editContent)
 {
     task->content = editContent;
 }
@@ -105,7 +117,7 @@ static void WriteTaskToMemory(Task *task)
 
 static void DisplayTask()
 {
-    char buffer[100];
+    char buffer[200];
     char *buffer_ptr = buffer;
 
     if (FILE_read(path, buffer, sizeof(buffer)) < 0) {
@@ -114,21 +126,28 @@ static void DisplayTask()
 
     char id[2];
     char date[16]; 
-    char task[48];
-    char status[2];
+    char taskDescription[48];
+    char taskStatus[2];
 
     char *line = strtok(buffer_ptr, "\n");
 
     while (line != NULL)
     {
-        if (sscanf(line, "%[^|]|%[^|]|%[^|]|%[^|]|", id, task, status, date) == 4) {
-            printf("%s\n", id);
-            printf(".Task: %s\n", task);
-            printf(".Status: %s\n", getStatus(status[0]));
-            printf(".Date: %s\n", date);
-            printf("----------------------\n");
-        } else {
-            printf("error: database error");
+        int ret = sscanf(line, "%[^|]|%[^|]|%[^|]|%[^|]|", id, taskDescription, taskStatus, date);
+        if (ret == 4) {
+            int status = taskStatus[0] - '0';
+
+            if (status == IN_PROGRESS) {
+                printf("  %s   [ ]", id);
+            }
+            else if (status == COMPLETED) {
+                printf("  %s   [X]", id);
+            }
+            printf("   %s   ", date);
+            printf("%s\n", taskDescription);
+        } 
+        else {
+            printf("error: database error\n");
         }
 
         line = strtok(NULL, "\n");
@@ -150,37 +169,105 @@ static void InsertTask()
 
         Task* newtask = createTask(task);
         WriteTaskToMemory(newtask);
-        ClearScreen();
+    }
+
+    currentProc = Proc_None;
+}
+
+
+static void EditTask()
+{
+    char index[2];
+    printf("Type the task index you want to edit: ");
+
+    if (fgets(index, sizeof(index), stdin)) {
+        // Remove trailing newline from fgets
+        size_t len = strlen(index);
+        if (len > 0 && index[len - 1] == '\n') {
+            index[len - 1] = '\0';
+        }
+        printf("You choose task %c\n", index[0]);
     }
 }
 
-static void MainProcess(char key)
+static void MainProcess()
 {
-    switch (key)
+    static int lastIndex = -1;
+    int currentIndex = getLastIndex();  
+
+    if (currentIndex != lastIndex) {
+        shouldClearScreen = 1;
+        lastIndex = currentIndex;
+    }
+
+    if (shouldClearScreen) {
+        ClearScreen();
+        DisplayTask();
+        shouldClearScreen = 0;
+    }
+
+    switch (currentProc)
     {
-        case INSERT:
+        case Proc_InsertTask:
         {
             InsertTask();
+            ClearScreen();
         } break;
 
-        case DELETE:
+        case Proc_DeleteTask:
         {
-            ;
+            ClearScreen();
         } break;
         
-        case CHANGE_STATUS:
+        case Proc_ChangeStatus:
         {
-            ;
+            ClearScreen();
         } break;
 
-        case EDIT_TASK:
+        case Proc_EditTask:
         {
-            ;
+            EditTask();
+            ClearScreen();
         } break;
 
         default:
         {
-            /* Should we told them? */
+            ;
+        } break;
+    }
+}
+
+static void WaitUserInput()
+{
+    if (currentProc != Proc_None) {
+        return;
+    }
+
+    char key = getch();
+    switch (key)
+    {
+        case INSERT:
+        {
+            currentProc = Proc_InsertTask;
+        } break;
+
+        case DELETE_TASK:
+        {
+            currentProc = Proc_DeleteTask;
+        } break;
+
+        case CHANGE_STATUS:
+        {
+            currentProc = Proc_ChangeStatus;
+        } break;
+
+        case EDIT_TASK:
+        {
+            currentProc = Proc_EditTask;
+        } break;
+    
+        default:
+        {
             exit(1);
         } break;
     }
@@ -204,8 +291,8 @@ int main()
     }
 
     while(1) {
-        DisplayTask();
-        WaitUserInput();
+        MainProcess();
     }
+
     return 0;
 }
