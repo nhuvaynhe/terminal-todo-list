@@ -1,18 +1,28 @@
 #include <stdio.h>
+#include "enum.h"
 
-int FILE_write(const char *path, char *content)
+int FILE_write(const char *path, char *content, enumbool isWriteWholeFile)
 {
     FILE *fptr;
 
-    fptr = fopen(path, "a");
-    if (fptr == NULL) {
+    if (isWriteWholeFile) {
         fptr = fopen(path, "w");
 
         if (fptr == NULL) {
-            printf("File: create file failed.\n");
             return -1;
         }
+    } 
+    else {
+        fptr = fopen(path, "a");
+        if (fptr == NULL) {
+            fptr = fopen(path, "w");
+
+            if (fptr == NULL) {
+                return -1;
+            }
+        }
     }
+
 
     fprintf(fptr, "%s", content);
     fclose(fptr);

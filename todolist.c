@@ -182,6 +182,69 @@ static void InsertTask()
 }
 
 
+static void ChangeTaskContent()
+{
+    char newTask[100]; 
+    
+    char index[2] = {'2', '\0'};
+
+    if (fgets(newTask, sizeof(newTask), stdin)) {
+        // Remove trailing newline from fgets
+        size_t len = strlen(newTask);
+        if (len > 0 && newTask[len - 1] == '\n') {
+            newTask[len - 1] = '\0';
+        }
+    }
+
+    char buffer[200];
+    char *buffer_ptr = buffer;
+
+    if (FILE_read(path, buffer, sizeof(buffer)) < 0) {
+        return;
+    }
+
+    // Prepare for parsing lines
+    char taskID[2];
+    char date[16];
+    char taskDescription[48];
+    char taskStatus[2];
+    int found = 0;
+
+    char *line = strtok(buffer, "\n");
+    char updatedBuffer[BUFFER_SIZE] = "";
+
+    while (line != NULL) {
+        char tempLine[LINE_SIZE];
+        strncpy(tempLine, line, sizeof(tempLine) - 1);
+        tempLine[sizeof(tempLine) - 1] = '\0'; // Ensure null-termination
+
+        int ret = sscanf(tempLine, "%[^|]|%[^|]|%[^|]|%[^|]", taskID, taskDescription, taskStatus, date);
+        if (ret == 4 && memcmp(index, taskID, sizeof(index)) == 0) {
+            snprintf(tempLine, sizeof(tempLine), "%s|%s|%s|%s", taskID, newTask, taskStatus, date);
+            found = 1;
+        }
+
+        // Append the (possibly updated) line to the updated buffer
+        strncat(updatedBuffer, tempLine, sizeof(updatedBuffer) - strlen(updatedBuffer) - 1);
+        strncat(updatedBuffer, "\n", sizeof(updatedBuffer) - strlen(updatedBuffer) - 1);
+
+        line = strtok(NULL, "\n");
+    }
+
+    if (!found) {
+        printf("Task with ID %s not found.\n", index);
+    }
+
+    if (FILE_write(path, updatedBuffer, eTRUE) < 0) {
+        return;
+    }
+
+    printf("File updated successfully.\n");
+
+    SetNextCommand(PROC_CMD_END);
+}
+
+
 static void EditTask()
 {
     char index[2];
